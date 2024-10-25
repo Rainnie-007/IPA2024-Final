@@ -1,0 +1,33 @@
+---
+- name: AUTOMATIC BACKUP OF RUNNING-CONFIG
+  hosts: CSR1kv
+  gather_facts: false
+  connection: local
+  
+  tasks:
+    - name: DISPLAYING THE RUNNING-CONFIG
+      ios_command:
+        commands:
+          - show running-config  
+      register: config
+
+    - name: Ensure backup directory exists
+      ansible.builtin.file:
+        path: backups
+        state: directory
+
+    - name: SAVE OUTPUT TO ./backups/
+      copy:
+        content: "{{ config.stdout[0] }}"
+        dest: "backups/show_run_{{ inventory_hostname }}.txt"
+      when: config.stdout | length > 0  # Ensure there is output before saving
+
+    - name: DISPLAY SUCCESS MESSAGE
+      debug:
+        msg: "Backup of {{ inventory_hostname }} completed successfully."
+      when: config.stdout | length > 0  # Show message only if there was output
+
+    - name: HANDLE FAILURE
+      debug:
+        msg: "Failed to retrieve running configuration from {{ inventory_hostname }}"
+      when: config.stdout | length == 0  # Show message if no output
